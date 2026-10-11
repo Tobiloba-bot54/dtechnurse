@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getDisplayImage } from '@/lib/media';
 import { notFound } from 'next/navigation';
 import { getEditorBySlug, parseEditorSocialLinks } from '@/lib/services/editors';
 import { listPublishedArticlesByEditor } from '@/lib/services/content';
@@ -67,15 +68,7 @@ export default async function EditorProfilePage({ params }: { params: Promise<Pa
           <div className="home-articles-grid">
             {articles.map(article => (
               <Link key={article.id} href={`/blog/${article.slug}`} className="home-article-card">
-                {article.featured_media_url ? (
-                  <div className="home-article-media home-article-media-image">
-                    <img src={article.featured_media_url} alt={article.featured_media_alt || ''} loading="lazy" />
-                  </div>
-                ) : (
-                  <div className="home-article-media" aria-hidden="true">
-                    <span>{article.title.slice(0, 1).toUpperCase()}</span>
-                  </div>
-                )}
+                <div className="home-article-media home-article-media-image"><img src={getDisplayImage(article.featured_media_url)} alt={article.featured_media_alt || ''} loading="lazy" /></div>
                 <div className="home-article-body">
                   <h3>{article.title}</h3>
                   {article.excerpt && <p>{article.excerpt}</p>}

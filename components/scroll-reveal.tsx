@@ -9,7 +9,7 @@ type Props = {
 };
 
 // Fades/slides a block into place the first time it scrolls into view.
-// Pure CSS transition + IntersectionObserver — no animation library needed.
+// Pure CSS transition + IntersectionObserver - no animation library needed.
 // Falls back to visible-immediately when IntersectionObserver isn't available
 // (very old browsers, some test environments), and the global
 // prefers-reduced-motion rule in globals.css already strips the transition

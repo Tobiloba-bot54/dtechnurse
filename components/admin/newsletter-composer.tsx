@@ -157,7 +157,7 @@ export default function NewsletterComposer() {
         <section className="admin-panel">
           <h3>Resend settings</h3>
           <p className="admin-muted">The Resend API key is stored on the server and used to send every campaign and article newsletter.</p>
-          <label className="admin-field">Resend API key{apiKeySet && <span className="admin-muted"> — currently {apiKeyMasked}</span>}<input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={apiKeySet ? 'Enter a new key to replace it' : 're_xxx'} /></label>
+          <label className="admin-field">Resend API key{apiKeySet && <span className="admin-muted"> - currently {apiKeyMasked}</span>}<input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={apiKeySet ? 'Enter a new key to replace it' : 're_xxx'} /></label>
           <label className="admin-field">From name<input value={fromName} maxLength={120} onChange={e => setFromName(e.target.value)} placeholder="DTECHNURSE" /></label>
           <label className="admin-field">From email<input type="email" value={fromEmail} maxLength={254} onChange={e => setFromEmail(e.target.value)} placeholder="news@dtechnurse.com" /></label>
           {settingsNotice && <p className="admin-status-message" role="status">{settingsNotice}</p>}

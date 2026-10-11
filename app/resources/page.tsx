@@ -1,0 +1,13 @@
+import Link from 'next/link';
+import { getDisplayImage } from '@/lib/media';
+import { listPublicResources, listResourceCategories } from '@/lib/services/resources';
+export const metadata = { title: 'Download Centre | DTECHNURSE', description: 'Browse nursing, research, digital health, and patient care resources from DTECHNURSE.' };
+export const revalidate = 60;
+export default async function ResourcesPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string }> }) {
+  const params = await searchParams;
+  const [resources, categories] = await Promise.all([listPublicResources({ query: params.q, category: params.category, limit: 60 }).catch(() => []), listResourceCategories().catch(() => [])]);
+  return <main className="content-page resource-library-page"><span className="eyebrow">DTECHNURSE DOWNLOAD CENTRE</span><h1>Practical resources for your learning and work.</h1><p className="lead">Explore downloadable nursing, research, digital health, and patient care resources. Sign in to keep your download history and access your files again.</p>
+    <form className="resource-filters" action="/resources"><label>Search resources<input type="search" name="q" defaultValue={params.q ?? ''} placeholder="Search guides, templates, notes…" /></label><label>Category<select name="category" defaultValue={params.category ?? ''}><option value="">All categories</option>{categories.map(category => <option key={category.id} value={category.slug}>{category.name}</option>)}</select></label><button className="button" type="submit">Search</button><Link className="button secondary" href="/resources">Clear</Link></form>
+    {resources.length ? <div className="resource-card-grid">{resources.map(resource => <article className="resource-card" key={resource.id}><Link href={`/resources/${resource.slug}`} className="resource-card-image"><img src={getDisplayImage(resource.featured_media_url)} alt={resource.featured_media_alt || `${resource.title} cover`} loading="lazy" /></Link><div className="resource-card-body"><div className="resource-card-meta"><span>{resource.file_type}</span><span>{resource.pricing === 'paid' ? `₦${(resource.price_kobo / 100).toLocaleString('en-NG')}` : 'Free'}</span></div><h2><Link href={`/resources/${resource.slug}`}>{resource.title}</Link></h2>{resource.category_name && <p className="resource-category-label">{resource.category_name}</p>}<p>{resource.excerpt}</p><Link className="text-link" href={`/resources/${resource.slug}`}>View resource <span aria-hidden="true">→</span></Link></div></article>)}</div> : <div className="notice-card"><strong>No published resources found.</strong><p>Try another search or category, or check back later.</p></div>}
+  </main>;
+}

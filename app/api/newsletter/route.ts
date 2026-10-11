@@ -14,15 +14,15 @@ export async function POST(request: Request) {
   const db = getDatabase();
   if (!db) return jsonError('The newsletter service is temporarily unavailable. Please try again later.', 503);
   try {
-    const existing = await db.prepare('SELECT id, status FROM newsletter_subscribers WHERE email = ? LIMIT 1').bind(email).first<{ id: string; status: string }>();
+    const existing = await db.prepare('SELECT id, status, unsubscribe_token FROM newsletter_subscribers WHERE email = ? LIMIT 1').bind(email).first<{ id: string; status: string; unsubscribe_token: string | null }>();
     if (existing) {
       if (existing.status !== 'subscribed') {
-        await db.prepare("UPDATE newsletter_subscribers SET status = 'subscribed' WHERE id = ?").bind(existing.id).run();
+        await db.prepare("UPDATE newsletter_subscribers SET status = 'subscribed', unsubscribe_token = COALESCE(unsubscribe_token, ?) WHERE id = ?").bind(crypto.randomUUID(), existing.id).run();
       }
       return Response.json({ ok: true, message: "You're already on the list." }, { headers: { 'Cache-Control': 'no-store' } });
     }
-    await db.prepare('INSERT INTO newsletter_subscribers (id, email) VALUES (?, ?)').bind(crypto.randomUUID(), email).run();
-    return Response.json({ ok: true, message: 'Thanks for subscribing! Please check your inbox.' }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+    await db.prepare('INSERT INTO newsletter_subscribers (id, email, unsubscribe_token) VALUES (?, ?, ?)').bind(crypto.randomUUID(), email, crypto.randomUUID()).run();
+    return Response.json({ ok: true, message: 'Thanks for subscribing! You are now subscribed. You can unsubscribe at any time from a newsletter email.' }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return jsonError('We could not save your subscription. Please try again later.', 503);
   }

@@ -1,15 +1,18 @@
 // File: DTECHNURSE-SITE-main/app/sitemap.ts
 import type { MetadataRoute } from 'next';
 import { listAllPublishedArticles, listActiveEditors } from '@/lib/services/content';
+import { listAllPublishedResources } from '@/lib/services/resources';
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.APP_BASE_URL || 'http://localhost:3000';
-  const staticEntries: MetadataRoute.Sitemap = ['', '/about', '/blog', '/contact', '/privacy'].map(path => ({
+  const staticEntries: MetadataRoute.Sitemap = ['', '/about', '/blog', '/resources', '/contact', '/privacy'].map(path => ({
     url: `${base}${path}`,
     lastModified: new Date(),
   }));
 
-  const [articles, editors] = await Promise.all([listAllPublishedArticles(), listActiveEditors()]);
+  const [articles, editors, resources] = await Promise.all([listAllPublishedArticles(), listActiveEditors(), listAllPublishedResources()]);
 
   const articleEntries: MetadataRoute.Sitemap = articles.map(a => ({
     url: `${base}/blog/${a.slug}`,
@@ -21,5 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(e.updated_at),
   }));
 
-  return [...staticEntries, ...articleEntries, ...editorEntries];
+  const resourceEntries: MetadataRoute.Sitemap = resources.map(resource => ({ url: `${base}/resources/${resource.slug}`, lastModified: new Date(resource.updated_at || Date.now()) }));
+
+  return [...staticEntries, ...articleEntries, ...editorEntries, ...resourceEntries];
 }

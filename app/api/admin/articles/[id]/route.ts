@@ -19,9 +19,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const db = getDatabase();
   if (!db) return jsonError('Database is not configured.', 503);
   const { id } = await context.params;
-  const article = await db.prepare('SELECT id, slug, title, excerpt, body_html, status, featured_media_id, editor_id, seo_title, seo_description, canonical_url, published_at, created_at, updated_at FROM articles WHERE id = ?').bind(id).first();
+  const article = await db.prepare('SELECT id, slug, title, excerpt, body_html, status, featured_media_id, editor_id, seo_title, seo_description, canonical_url, published_at, created_at, updated_at FROM articles WHERE id = ?').bind(id).first<Record<string, unknown>>();
   if (!article) return jsonError('Article not found.', 404);
-  return Response.json({ article }, { headers: { 'Cache-Control': 'no-store' } });
+  const categories = await db.prepare('SELECT category_id FROM article_category_links WHERE article_id = ?').bind(id).all<{ category_id: string }>();
+  return Response.json({ article: { ...article, category_ids: (categories.results || []).map(item => item.category_id) } }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -45,15 +46,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const canonicalUrl = cleanText(body.canonicalUrl, 500) || null;
   const featuredMediaId = cleanText(body.featuredMediaId, 100) || null;
   const editorId = cleanText(body.editorId, 100) || null;
+  const categoryIds = Array.isArray(body.categoryIds) ? [...new Set(body.categoryIds.filter((value): value is string => typeof value === 'string').map(value => cleanText(value, 100)))].slice(0, 12) : [];
+  const scheduledAt = status === 'scheduled' && typeof body.scheduledAt === 'string' && !Number.isNaN(Date.parse(body.scheduledAt)) ? new Date(body.scheduledAt).toISOString() : null;
+  if (status === 'scheduled' && !scheduledAt) return jsonError('Choose a valid scheduled publication date and time.', 400);
+  if (status === 'scheduled' && scheduledAt && Date.parse(scheduledAt) <= Date.now()) return jsonError('Scheduled publication must be in the future.', 400);
   if (!title || !slug) return jsonError('Title and a valid slug are required.', 400);
   try {
-    const update = db.prepare("UPDATE articles SET slug = ?, title = ?, excerpt = ?, body_html = ?, status = ?, featured_media_id = ?, editor_id = ?, seo_title = ?, seo_description = ?, canonical_url = ?, published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-      .bind(slug, title, excerpt, html, status, featuredMediaId, editorId, seoTitle, seoDescription, canonicalUrl, status, id);
+    const update = db.prepare("UPDATE articles SET slug = ?, title = ?, excerpt = ?, body_html = ?, status = ?, featured_media_id = ?, editor_id = ?, seo_title = ?, seo_description = ?, canonical_url = ?, published_at = CASE WHEN ? = 'published' THEN CURRENT_TIMESTAMP WHEN ? = 'scheduled' THEN ? ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+      .bind(slug, title, excerpt, html, status, featuredMediaId, editorId, seoTitle, seoDescription, canonicalUrl, status, status, scheduledAt, id);
     const revision = db.prepare('INSERT INTO article_revisions (id, article_id, title, excerpt, body_html, changed_by) VALUES (?, ?, ?, ?, ?, ?)').bind(randomUUID(), id, title, excerpt, html, auth.user.id);
     const audit = db.prepare('INSERT INTO admin_audit_log (id, actor_user_id, action, resource_type, resource_id) VALUES (?, ?, ?, ?, ?)').bind(randomUUID(), auth.user.id, `article.${status === 'published' ? 'publish' : 'update'}`, 'article', id);
-    if (db.batch) await db.batch([update, revision, audit]);
-    else { await update.run(); await revision.run(); await audit.run(); }
-    return Response.json({ id, slug, status }, { headers: { 'Cache-Control': 'no-store' } });
+    const clearCategories = db.prepare('DELETE FROM article_category_links WHERE article_id = ?').bind(id);
+    const addCategories = categoryIds.map(categoryId => db.prepare('INSERT OR IGNORE INTO article_category_links (article_id, category_id) VALUES (?, ?)').bind(id, categoryId));
+    if (db.batch) await db.batch([update, revision, audit, clearCategories, ...addCategories]);
+    else { await update.run(); await revision.run(); await audit.run(); await clearCategories.run(); for (const statement of addCategories) await statement.run(); }
+    return Response.json({ id, slug, status, scheduledAt }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return jsonError('Could not update the article. Check whether the slug is already in use and whether migrations are current.', 409);
   }
@@ -81,7 +88,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     return jsonError('Could not delete the article.', 409);
   }
 
-  // Only remove the featured image if no other article still points at it —
+  // Only remove the featured image if no other article still points at it -
   // the same uploaded media row can be reused as the featured image elsewhere.
   if (article.featured_media_id) {
     const stillUsed = await db

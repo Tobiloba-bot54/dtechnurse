@@ -2,13 +2,21 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-type Article = { id: string; slug: string; title: string; excerpt: string; body_html?: string; status: string; seo_title?: string | null; seo_description?: string | null; canonical_url?: string | null; featured_media_id?: string | null; editor_id?: string | null };
+type Article = { id: string; slug: string; title: string; excerpt: string; body_html?: string; status: string; seo_title?: string | null; seo_description?: string | null; canonical_url?: string | null; featured_media_id?: string | null; editor_id?: string | null; published_at?: string | null; category_ids?: string[] };
+type Category = { id: string; name: string; slug: string; description: string };
+type Revision = { id: string; title: string; excerpt: string; body_html: string; created_at: string };
 type Media = { id: string; public_url: string; alt_text: string; caption: string; mime_type: string; size_bytes: number };
 type EditorProfile = { id: string; display_name: string; status: string };
+const toLocalDateTime = (value: string) => { const date = new Date(value); if (Number.isNaN(date.getTime())) return ''; const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 16); };
 const slugify = (value: string) => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 180);
 
 export default function ArticleEditor() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [media, setMedia] = useState<Media[]>([]);
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -37,6 +45,7 @@ export default function ArticleEditor() {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef = useRef<((nextStatus?: string) => Promise<void>) | null>(null);
   const readBody = () => mode === 'source' ? source : editorRef.current?.innerHTML ?? source;
 
   const loadArticles = useCallback(async () => {
@@ -61,12 +70,13 @@ export default function ArticleEditor() {
     }
   }, [mediaLoaded]);
   useEffect(() => { loadArticles().catch(e => setNotice(e instanceof Error ? e.message : 'Could not load articles.')); }, [loadArticles]);
+  useEffect(() => { fetch('/api/admin/categories', { cache: 'no-store' }).then(async r => { const data = await r.json(); if (!r.ok) throw new Error(data.error || 'Could not load categories.'); setCategories(data.categories || []); }).catch(e => setNotice(e instanceof Error ? e.message : 'Could not load categories.')); }, []);
   useEffect(() => {
     fetch('/api/admin/editors', { cache: 'no-store' }).then(r => r.json()).then(data => setEditors(data.editors || [])).catch(() => {});
   }, []);
 
   const reset = () => {
-    setSelectedId(''); setTitle(''); setSlug(''); setSlugTouched(false); setExcerpt(''); setStatus('draft'); setSeoTitle(''); setSeoDescription(''); setCanonicalUrl(''); setFeaturedMediaId(''); setEditorId(''); setSource(''); setNewsletterNotice('');
+    setSelectedId(''); setTitle(''); setSlug(''); setSlugTouched(false); setExcerpt(''); setStatus('draft'); setSeoTitle(''); setSeoDescription(''); setCanonicalUrl(''); setFeaturedMediaId(''); setEditorId(''); setSource(''); setNewsletterNotice(''); setCategoryIds([]); setScheduledAt(''); setRevisions([]); setRevisionsOpen(false);
     if (editorRef.current) editorRef.current.innerHTML = '';
     setMode('visual'); setNotice('New draft ready.');
   };
@@ -77,7 +87,7 @@ export default function ArticleEditor() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load article.');
       const a: Article = data.article;
-      setSelectedId(a.id); setTitle(a.title); setSlug(a.slug); setSlugTouched(true); setExcerpt(a.excerpt || ''); setStatus(a.status); setSeoTitle(a.seo_title || ''); setSeoDescription(a.seo_description || ''); setCanonicalUrl(a.canonical_url || ''); setFeaturedMediaId(a.featured_media_id || ''); setEditorId(a.editor_id || ''); setSource(a.body_html || '');
+      setSelectedId(a.id); setTitle(a.title); setSlug(a.slug); setSlugTouched(true); setExcerpt(a.excerpt || ''); setStatus(a.status); setSeoTitle(a.seo_title || ''); setSeoDescription(a.seo_description || ''); setCanonicalUrl(a.canonical_url || ''); setFeaturedMediaId(a.featured_media_id || ''); setEditorId(a.editor_id || ''); setSource(a.body_html || ''); setCategoryIds(a.category_ids || []); setScheduledAt(a.published_at ? toLocalDateTime(a.published_at) : ''); setRevisions([]); setRevisionsOpen(false);
       if (editorRef.current) editorRef.current.innerHTML = a.body_html || '';
       setMode('visual'); setNotice(`Loaded “${a.title}”.`); setNewsletterNotice('');
     } catch (e) { setNotice(e instanceof Error ? e.message : 'Could not load article.'); }
@@ -101,7 +111,7 @@ export default function ArticleEditor() {
   const save = async (nextStatus = status) => {
     setBusy(true); setNotice('Saving…');
     const bodyHtml = readBody();
-    const payload = { title, slug, excerpt, bodyHtml, status: nextStatus, seoTitle, seoDescription, canonicalUrl, featuredMediaId: featuredMediaId || null, editorId: editorId || null };
+    const payload = { title, slug, excerpt, bodyHtml, status: nextStatus, seoTitle, seoDescription, canonicalUrl, featuredMediaId: featuredMediaId || null, editorId: editorId || null, categoryIds, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null };
     try {
       const response = await fetch(selectedId ? `/api/admin/articles/${encodeURIComponent(selectedId)}` : '/api/admin/articles', { method: selectedId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await response.json();
@@ -112,8 +122,33 @@ export default function ArticleEditor() {
         const exists = current.some(article => article.id === savedArticle.id);
         return exists ? current.map(article => article.id === savedArticle.id ? { ...article, ...savedArticle } : article) : [savedArticle, ...current].slice(0, 100);
       });
-      setNotice(nextStatus === 'published' ? 'Article published.' : 'Draft saved successfully.');
+      setNotice(nextStatus === 'published' ? 'Article published.' : nextStatus === 'scheduled' ? 'Article scheduled successfully.' : 'Draft saved successfully.');
     } catch (e) { setNotice(e instanceof Error ? e.message : 'Save failed.'); }
+    finally { setBusy(false); }
+  };
+  saveRef.current = save;
+  const loadRevisions = async () => {
+    if (!selectedId) return;
+    setRevisionsOpen(true);
+    try {
+      const response = await fetch(`/api/admin/articles/${encodeURIComponent(selectedId)}/revisions`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load revision history.');
+      setRevisions(data.revisions || []);
+    } catch (e) { setNotice(e instanceof Error ? e.message : 'Could not load revision history.'); }
+  };
+  const restoreRevision = async (revisionId: string) => {
+    if (!selectedId || !window.confirm('Restore this earlier version? Your current version will first be saved in revision history.')) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/articles/${encodeURIComponent(selectedId)}/revisions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revisionId }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not restore revision.');
+      setTitle(data.article.title); setExcerpt(data.article.excerpt || ''); setSource(data.article.body_html || '');
+      if (editorRef.current) editorRef.current.innerHTML = data.article.body_html || '';
+      setNotice('Revision restored. Save changes when you are ready.');
+      await loadRevisions();
+    } catch (e) { setNotice(e instanceof Error ? e.message : 'Could not restore revision.'); }
     finally { setBusy(false); }
   };
   const deleteArticle = async () => {
@@ -132,11 +167,14 @@ export default function ArticleEditor() {
     finally { setBusy(false); }
   };
   useEffect(() => {
-    if (!selectedId || busy || mode === 'preview') return;
+    if (mode === 'preview' || busy || !title.trim() || !slug.trim()) return;
     if (autosaveRef.current) clearTimeout(autosaveRef.current);
-    autosaveRef.current = setTimeout(() => { setNotice('Changes are in this editor. Use Save draft to store them securely.'); }, 1200);
+    autosaveRef.current = setTimeout(() => {
+      setNotice('Autosaving your changes…');
+      void saveRef.current?.(status);
+    }, 2500);
     return () => { if (autosaveRef.current) clearTimeout(autosaveRef.current); };
-  }, [title, slug, excerpt, source, status, seoTitle, seoDescription, canonicalUrl, selectedId, busy, mode]);
+  }, [title, slug, excerpt, source, status, seoTitle, seoDescription, canonicalUrl, selectedId, mode, categoryIds, scheduledAt, featuredMediaId, editorId]);
 
   const upload = async () => {
     if (!uploadFile) { setNotice('Choose an image first.'); return; }
@@ -182,7 +220,7 @@ export default function ArticleEditor() {
     <aside className="admin-article-sidebar"><div className="admin-sidebar-top"><h2>Articles</h2><button className="button small" onClick={reset} type="button">New article</button></div><input aria-label="Search articles" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search articles" />
       <div className="admin-article-list">{filtered.map(a => <button type="button" key={a.id} className={`admin-article-item ${selectedId === a.id ? 'active' : ''}`} onClick={() => openArticle(a.id)}><strong>{a.title}</strong><span>{a.status} · /{a.slug}</span></button>)}{filtered.length === 0 && <p className="admin-muted">No matching articles.</p>}</div>
     </aside>
-    <div className="admin-editor-main"><div className="admin-editor-heading"><div><span className="eyebrow">CONTENT STUDIO</span><h2>{selectedId ? 'Edit article' : 'Create article'}</h2></div><div className="admin-editor-actions">{selectedId && status === 'published' && <button type="button" className="button secondary small" disabled={sendingNewsletter} onClick={sendAsNewsletter}>{sendingNewsletter ? 'Sending…' : 'Send as newsletter'}</button>}{selectedId && <button type="button" className="button secondary small admin-delete-button" disabled={busy} onClick={deleteArticle}>Delete</button>}<button type="button" className="button secondary small" disabled={busy} onClick={() => save('draft')}>Save draft</button><button type="button" className="button small" disabled={busy} onClick={() => save('published')}>Publish</button></div></div>
+    <div className="admin-editor-main"><div className="admin-editor-heading"><div><span className="eyebrow">CONTENT STUDIO</span><h2>{selectedId ? 'Edit article' : 'Create article'}</h2></div><div className="admin-editor-actions">{selectedId && status === 'published' && <button type="button" className="button secondary small" disabled={sendingNewsletter} onClick={sendAsNewsletter}>{sendingNewsletter ? 'Sending…' : 'Send as newsletter'}</button>}{selectedId && <button type="button" className="button secondary small admin-delete-button" disabled={busy} onClick={deleteArticle}>Delete</button>}<button type="button" className="button secondary small" disabled={busy} onClick={() => save('draft')}>Save draft</button><button type="button" className="button small" disabled={busy} onClick={() => save('published')}>Publish</button><button type="button" className="button secondary small" disabled={busy || !scheduledAt} onClick={() => save('scheduled')}>Schedule</button></div></div>
       {notice && <p className="admin-status-message" role="status">{notice}</p>}
       {newsletterNotice && <p className="admin-status-message" role="status">{newsletterNotice}</p>}
       <label className="admin-field">Article title<input value={title} maxLength={180} onChange={e => { setTitle(e.target.value); if (!slugTouched) setSlug(slugify(e.target.value)); }} placeholder="Write a clear, specific title" /></label>
@@ -197,6 +235,11 @@ export default function ArticleEditor() {
         <div className="admin-upload-form"><label className="admin-field">Upload image<input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={e => setUploadFile(e.target.files?.[0] || null)} /></label><label className="admin-field">Alternative text<input value={alt} onChange={e => setAlt(e.target.value)} maxLength={300} placeholder="Describe the image for accessibility" /></label><label className="admin-field">Caption<input value={caption} onChange={e => setCaption(e.target.value)} maxLength={500} placeholder="Optional image caption" /></label><button type="button" className="button secondary small" disabled={busy || !uploadFile} onClick={upload}>Upload and insert image</button></div>
       </section><section className="admin-panel"><h3>Featured image</h3><p className="admin-muted">Choose an image for article cards and social previews. This does not replace images in the article body.</p><select value={featuredMediaId} onFocus={() => { if (!mediaLoaded) void loadMedia(); }} onChange={e => setFeaturedMediaId(e.target.value)}><option value="">{mediaLoaded ? 'No featured image' : 'Load images to choose'}</option>{media.map(m => <option key={m.id} value={m.id}>{m.alt_text || m.public_url.split('/').pop()}</option>)}</select>{featuredMediaId && media.find(m => m.id === featuredMediaId) && <img className="admin-featured-preview" src={media.find(m => m.id === featuredMediaId)?.public_url} alt={media.find(m => m.id === featuredMediaId)?.alt_text || ''} />}</section>
       <section className="admin-panel"><h3>Editor</h3><p className="admin-muted">Choose which editor's byline appears on this article. Manage editors from the Editors tab.</p><select value={editorId} onChange={e => setEditorId(e.target.value)}><option value="">No editor assigned</option>{editors.map(ed => <option key={ed.id} value={ed.id}>{ed.display_name}{ed.status === 'hidden' ? ' (hidden)' : ''}</option>)}</select></section></div>
+      <div className="admin-editor-grid admin-editor-extra-grid">
+        <section className="admin-panel"><h3>Article categories</h3><p className="admin-muted">Select every category that fits this article.</p><div className="admin-category-options">{categories.map(category => <label key={category.id}><input type="checkbox" checked={categoryIds.includes(category.id)} onChange={e => setCategoryIds(current => e.target.checked ? [...current, category.id] : current.filter(id => id !== category.id))} /><span>{category.name}</span></label>)}</div>{categories.length === 0 && <p className="admin-muted">No categories loaded. Apply migration 0007 and refresh.</p>}</section>
+        <section className="admin-panel"><h3>Publication schedule</h3><p className="admin-muted">Choose a future date and time, then save with Scheduled status. Times use your device's local timezone.</p><label className="admin-field">Publish date and time<input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} /></label><p className="admin-muted">The hosting scheduler must call the protected publishing endpoint regularly.</p></section>
+      </div>
+      {selectedId && <section className="admin-panel admin-revisions-panel"><div className="admin-revisions-heading"><div><h3>Revision history</h3><p className="admin-muted">Review earlier saved versions and restore one when needed.</p></div><button type="button" className="button secondary small" onClick={() => revisionsOpen ? setRevisionsOpen(false) : void loadRevisions()}>{revisionsOpen ? 'Hide history' : 'View history'}</button></div>{revisionsOpen && <div className="admin-revision-list">{revisions.map(revision => <div className="admin-revision-item" key={revision.id}><div><strong>{revision.title || 'Untitled version'}</strong><span>{new Date(revision.created_at).toLocaleString()}</span><p>{(revision.excerpt || revision.body_html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).slice(0, 160)}</p></div><button type="button" className="button secondary small" disabled={busy} onClick={() => void restoreRevision(revision.id)}>Restore</button></div>)}{revisions.length === 0 && <p className="admin-muted">No revisions available yet.</p>}</div>}</section>}
       <details className="admin-panel admin-seo-panel"><summary>SEO and social metadata</summary><div className="admin-seo-fields"><label className="admin-field">SEO title<input value={seoTitle} maxLength={180} onChange={e => setSeoTitle(e.target.value)} placeholder={title || 'Search result title'} /></label><label className="admin-field">SEO description<textarea value={seoDescription} maxLength={320} rows={3} onChange={e => setSeoDescription(e.target.value)} placeholder="Describe the article in search results" /></label><label className="admin-field">Canonical URL<input type="url" value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} placeholder="https://example.com/blog/article" /></label></div></details>
       <div className="admin-bottom-actions"><label className="admin-field">Publication status<select value={status} onChange={e => setStatus(e.target.value)}><option value="draft">Draft</option><option value="published">Published</option><option value="scheduled">Scheduled</option><option value="archived">Archived</option></select></label><button type="button" className="button" disabled={busy} onClick={() => save(status)}>Save changes</button></div>
     </div>

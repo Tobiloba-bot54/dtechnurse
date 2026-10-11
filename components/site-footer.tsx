@@ -22,7 +22,7 @@ export async function SiteFooter() {
   try {
     socialLinks = await getSocialLinks();
   } catch {
-    // Database unavailable at render time — fall back to the shipped defaults
+    // Database unavailable at render time - fall back to the shipped defaults
     // so the footer still renders.
   }
   const visibleSocialLinks = socialLinks.filter(link => link.enabled);

@@ -1,7 +1,7 @@
 // File: DTECHNURSE-SITE-main/components/social-icon.tsx
 // Admin-added platforms can be anything, so this maps a small set of known
 // names to their brand glyph and falls back to a generic link icon for
-// anything else — admin-added platforms never break rendering.
+// anything else - admin-added platforms never break rendering.
 export function SocialIcon({ platform }: { platform: string }): React.ReactElement {
   const key = platform.trim().toLowerCase();
   switch (key) {

@@ -1,0 +1,14 @@
+DTECHNURSE MERGE INSTRUCTIONS
+
+This package contains only files that are new or changed compared with the original project. It does not contain the complete project.
+
+1. Back up the current DTECHNURSE project.
+2. Extract this ZIP into the project root, preserving the included folder paths and allowing updated files to replace older versions.
+3. Review UPDATED_FILES_MANIFEST.txt for the complete list of new and updated files.
+4. Apply database migrations in order if they have not already been applied. Phase One includes migrations 0007 and 0008. The new resource download centre requires db/migrations/0009_resource_download_centre.sql.
+5. Add PAYSTACK_SECRET_KEY to the hosting environment for the server-side Paystack secret. NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY is optional. The secret can alternatively be saved in Admin Dashboard > Settings > Paystack settings.
+6. Confirm Supabase authentication, Cloudflare D1, and R2 media storage are configured. Resource cover uploads use the existing admin media upload endpoint and R2 configuration.
+7. Set Google Drive sharing permissions appropriately for each resource file. The application only releases the Drive URL after authentication and, for paid resources, verified payment.
+8. Install project dependencies and run npm run build in the full project before deploying.
+
+Validation note: SQL migrations 0001 through 0009 were executed successfully against SQLite for syntax/schema validation, and TypeScript files passed a syntax transpilation check. A full Next.js build could not be completed in this environment because dependency installation timed out. A successful application build has therefore not been confirmed.

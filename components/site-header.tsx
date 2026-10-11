@@ -31,12 +31,14 @@ export async function SiteHeader() {
         <Link href="/">Home</Link>
         <Link href="/about">About</Link>
         <Link href="/blog">Blog</Link>
+        <Link href="/resources">Resources</Link>
         <Link href="/contact">Contact</Link>
       </nav>
       <div className="header-actions">
         {user ? (
           <>
-            {isAdmin && <Link className="text-link" href="/admin">Dashboard</Link>}
+            <Link className="text-link" href="/dashboard">My downloads</Link>
+            {isAdmin && <Link className="text-link" href="/admin">Admin</Link>}
             <LogoutButton />
           </>
         ) : (
