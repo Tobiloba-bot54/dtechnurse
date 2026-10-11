@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import sanitizeHtml from 'sanitize-html';
 import { getDatabase } from '@/lib/server/db';
+import { getBucket } from '@/lib/server/storage';
 import { requireAdmin } from '@/lib/server/supabase-auth';
 import { cleanText, jsonError } from '@/lib/server/validation';
 
@@ -93,11 +94,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
         .bind(article.featured_media_id)
         .first<{ id: string; object_key: string }>();
       if (media) {
-        const runtimeBindings = globalThis as typeof globalThis & {
-          env?: { MEDIA?: { delete: (key: string) => Promise<unknown> } };
-          MEDIA?: { delete: (key: string) => Promise<unknown> };
-        };
-        const bucket = runtimeBindings.env?.MEDIA ?? runtimeBindings.MEDIA;
+        const bucket = getBucket();
         try {
           if (bucket) await bucket.delete(media.object_key);
           await db.prepare('DELETE FROM media_assets WHERE id = ?').bind(media.id).run();
