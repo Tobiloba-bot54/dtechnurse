@@ -1,51 +1,80 @@
-// File: DTECHNURSE-SITE-main/components/site-header.tsx
+// File: DTECHNURSE-SITE-main/components/site-footer.tsx
 import Link from 'next/link';
-import { getSupabaseServerClient } from '@/lib/server/supabase-auth';
-import { getDatabase } from '@/lib/server/db';
-import { LogoutButton } from '@/components/logout-button';
+import { getSocialLinks, defaultSocialLinks } from '@/lib/services/site-settings';
+import { SocialIcon } from './social-icon';
 
-export async function SiteHeader() {
-  const supabase = await getSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
+const EXPLORE_LINKS = [
+  { href: '/', label: 'Home' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+];
 
-  let isAdmin = false;
-  if (user) {
-    const db = getDatabase();
-    if (db) {
-      const profile = await db
-        .prepare('SELECT role_key, account_status FROM users_profile WHERE id = ?')
-        .bind(user.id)
-        .first<{ role_key: string; account_status: string }>();
-      isAdmin = Boolean(profile && profile.account_status === 'active' && profile.role_key === 'admin');
-    }
+const ACCOUNT_LINKS = [
+  { href: '/login', label: 'Log in' },
+  { href: '/signup', label: 'Create account' },
+  { href: '/privacy', label: 'Privacy policy' },
+  { href: '/terms', label: 'Terms of service' },
+];
+
+export async function SiteFooter() {
+  let socialLinks = defaultSocialLinks;
+  try {
+    socialLinks = await getSocialLinks();
+  } catch {
+    // Database unavailable at render time — fall back to the shipped defaults
+    // so the footer still renders.
   }
+  const visibleSocialLinks = socialLinks.filter(link => link.enabled);
 
   return (
-    <header className="site-header">
-      <Link className="brand" href="/" aria-label="DTECHNURSE home">
-        <img src="/dtechnurse-logo.jpg" alt="DTECHNURSE, Health Tech Impact" />
-        <span>DTECHNURSE</span>
-      </Link>
-      <nav aria-label="Main navigation">
-        <Link href="/">Home</Link>
-        <Link href="/about">About</Link>
-        <Link href="/blog">Blog</Link>
-        <Link href="/contact">Contact</Link>
-      </nav>
-      <div className="header-actions">
-        {user ? (
-          <>
-            {isAdmin && <Link className="text-link" href="/admin">Dashboard</Link>}
-            <LogoutButton />
-          </>
-        ) : (
-          <>
-            <Link className="text-link" href="/login">Log in</Link>
-            <Link className="button small" href="/signup">Create account</Link>
-          </>
-        )}
+    <footer className="site-footer">
+      <div className="footer-top">
+        <div className="footer-brand">
+          <strong>DTECHNURSE</strong>
+          <p>Empowering nurses with the technology skills needed to revolutionize healthcare. Bridging the gap between clinical expertise and digital innovation.</p>
+          {visibleSocialLinks.length > 0 && (
+            <div className="footer-social" aria-label="DTECHNURSE on social media">
+              {visibleSocialLinks.map(social => (
+                <a key={social.platform} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.platform}>
+                  <SocialIcon platform={social.platform} />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="footer-col">
+          <span className="footer-col-title">Explore</span>
+          <nav aria-label="Explore DTECHNURSE">
+            {EXPLORE_LINKS.map(link => (
+              <Link key={link.href} href={link.href}>{link.label}</Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="footer-col">
+          <span className="footer-col-title">Account</span>
+          <nav aria-label="Account">
+            {ACCOUNT_LINKS.map(link => (
+              <Link key={link.href} href={link.href}>{link.label}</Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="footer-col">
+          <span className="footer-col-title">Contact</span>
+          <nav aria-label="Contact DTECHNURSE">
+            <Link href="/contact">Send a message</Link>
+            <a href="mailto:hello@dtechnurse.com">hello@dtechnurse.com</a>
+          </nav>
+        </div>
       </div>
-    </header>
+
+      <div className="footer-bottom">
+        <small>© {new Date().getFullYear()} DTECHNURSE. All rights reserved.</small>
+        <span className="footer-tag">Health. Technology. Impact.</span>
+      </div>
+    </footer>
   );
 }
