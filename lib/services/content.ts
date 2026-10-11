@@ -36,6 +36,28 @@ export async function listPublishedArticlesByEditor(editorId: string, limit = 20
   return result.results ?? [];
 }
 
+export type SitemapArticle = { slug: string; published_at: string | null; updated_at: string };
+export async function listAllPublishedArticles(limit = 1000): Promise<SitemapArticle[]> {
+  const db = getDatabase(); if (!db) return [];
+  const result = await db
+    .prepare(
+      "SELECT slug, published_at, updated_at FROM articles WHERE status = 'published' AND (published_at IS NULL OR published_at <= CURRENT_TIMESTAMP) ORDER BY published_at DESC LIMIT ?"
+    )
+    .bind(limit)
+    .all<SitemapArticle>();
+  return result.results ?? [];
+}
+
+export type SitemapEditor = { slug: string; updated_at: string };
+export async function listActiveEditors(limit = 200): Promise<SitemapEditor[]> {
+  const db = getDatabase(); if (!db) return [];
+  const result = await db
+    .prepare("SELECT slug, updated_at FROM editors WHERE status = 'active' ORDER BY updated_at DESC LIMIT ?")
+    .bind(limit)
+    .all<SitemapEditor>();
+  return result.results ?? [];
+}
+
 // Admin-editable static pages (About, Privacy, Contact, …). Cached per request so a
 // page's generateMetadata() and its component body share one DB call.
 export const getEditablePage = cache(async (slug: string): Promise<PublicPage | null> => {
