@@ -7,6 +7,7 @@ type EditablePage = { id: string; slug: string; title: string; body_html: string
 const KNOWN_PAGES: Array<{ slug: string; label: string }> = [
   { slug: 'about', label: 'About' },
   { slug: 'privacy', label: 'Privacy policy' },
+  { slug: 'terms', label: 'Terms of service' },
   { slug: 'contact', label: 'Contact (intro text)' },
 ];
 
