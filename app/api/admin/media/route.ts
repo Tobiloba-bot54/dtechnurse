@@ -1,6 +1,7 @@
 // File: DTECHNURSE-SITE-main/app/api/admin/media/route.ts
 import { randomUUID } from 'node:crypto';
 import { getDatabase } from '@/lib/server/db';
+import { getBucket, getPublicMediaBase } from '@/lib/server/storage';
 import { requireAdmin } from '@/lib/server/supabase-auth';
 import { jsonError } from '@/lib/server/validation';
 
@@ -22,9 +23,8 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response;
   const db = getDatabase();
   if (!db) return jsonError('Database is not configured.', 503);
-  const runtimeBindings = globalThis as typeof globalThis & { env?: { MEDIA?: { put: (key: string, value: ArrayBuffer, options?: unknown) => Promise<unknown> }; MEDIA_PUBLIC_URL?: string }; MEDIA?: { put: (key: string, value: ArrayBuffer, options?: unknown) => Promise<unknown> }; MEDIA_PUBLIC_URL?: string };
-  const bucket = runtimeBindings.env?.MEDIA ?? runtimeBindings.MEDIA;
-  const publicBase = runtimeBindings.env?.MEDIA_PUBLIC_URL ?? runtimeBindings.MEDIA_PUBLIC_URL ?? process.env.R2_PUBLIC_BASE_URL;
+  const bucket = getBucket();
+  const publicBase = getPublicMediaBase();
   if (!bucket || !publicBase) return jsonError('R2 media storage is not configured.', 503);
   let form: FormData;
   try { form = await request.formData(); } catch { return jsonError('Expected a multipart upload.', 400); }
