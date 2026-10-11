@@ -108,6 +108,21 @@ export default function ArticleEditor() {
     } catch (e) { setNotice(e instanceof Error ? e.message : 'Save failed.'); }
     finally { setBusy(false); }
   };
+  const deleteArticle = async () => {
+    if (!selectedId) return;
+    const confirmed = window.confirm(`Permanently delete "${title || 'this article'}"? This removes it from the database and cannot be undone. Its featured image is also deleted from storage if no other article uses it.`);
+    if (!confirmed) return;
+    setBusy(true); setNotice('Deleting…');
+    try {
+      const response = await fetch(`/api/admin/articles/${encodeURIComponent(selectedId)}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Delete failed.');
+      setArticles(current => current.filter(article => article.id !== selectedId));
+      reset();
+      setNotice('Article permanently deleted.');
+    } catch (e) { setNotice(e instanceof Error ? e.message : 'Delete failed.'); }
+    finally { setBusy(false); }
+  };
   useEffect(() => {
     if (!selectedId || busy || mode === 'preview') return;
     if (autosaveRef.current) clearTimeout(autosaveRef.current);
@@ -135,7 +150,7 @@ export default function ArticleEditor() {
     <aside className="admin-article-sidebar"><div className="admin-sidebar-top"><h2>Articles</h2><button className="button small" onClick={reset} type="button">New article</button></div><input aria-label="Search articles" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search articles" />
       <div className="admin-article-list">{filtered.map(a => <button type="button" key={a.id} className={`admin-article-item ${selectedId === a.id ? 'active' : ''}`} onClick={() => openArticle(a.id)}><strong>{a.title}</strong><span>{a.status} · /{a.slug}</span></button>)}{filtered.length === 0 && <p className="admin-muted">No matching articles.</p>}</div>
     </aside>
-    <div className="admin-editor-main"><div className="admin-editor-heading"><div><span className="eyebrow">CONTENT STUDIO</span><h2>{selectedId ? 'Edit article' : 'Create article'}</h2></div><div className="admin-editor-actions"><button type="button" className="button secondary small" disabled={busy} onClick={() => save('draft')}>Save draft</button><button type="button" className="button small" disabled={busy} onClick={() => save('published')}>Publish</button></div></div>
+    <div className="admin-editor-main"><div className="admin-editor-heading"><div><span className="eyebrow">CONTENT STUDIO</span><h2>{selectedId ? 'Edit article' : 'Create article'}</h2></div><div className="admin-editor-actions">{selectedId && <button type="button" className="button secondary small admin-delete-button" disabled={busy} onClick={deleteArticle}>Delete</button>}<button type="button" className="button secondary small" disabled={busy} onClick={() => save('draft')}>Save draft</button><button type="button" className="button small" disabled={busy} onClick={() => save('published')}>Publish</button></div></div>
       {notice && <p className="admin-status-message" role="status">{notice}</p>}
       <label className="admin-field">Article title<input value={title} maxLength={180} onChange={e => { setTitle(e.target.value); if (!slugTouched) setSlug(slugify(e.target.value)); }} placeholder="Write a clear, specific title" /></label>
       <label className="admin-field">URL slug<div className="admin-slug-field"><span>/blog/</span><input value={slug} maxLength={180} onChange={e => { setSlugTouched(true); setSlug(slugify(e.target.value)); }} placeholder="article-url" /></div></label>
