@@ -1,0 +1,9 @@
+# File: DTECHNURSE-SITE-main/.gitignore
+node_modules
+.next
+out
+.env
+.env.*
+!.env.example
+.DS_Store
+*.tsbuildinfo

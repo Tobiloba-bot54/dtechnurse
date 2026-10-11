@@ -1,0 +1,3 @@
+// File: DTECHNURSE-SITE-main/app/about/page.tsx
+export const metadata = { title: 'About DTECHNURSE' };
+export default function AboutPage() { return <main className="content-page"><span className="eyebrow">ABOUT US</span><h1>Health. Technology. Impact.</h1><p className="lead">DTECHNURSE is a healthcare and technology-focused platform built to connect clinical knowledge with digital innovation.</p><section className="prose"><h2>Our purpose</h2><p>We aim to make useful nursing, healthcare technology and professional learning resources easier to discover and understand.</p><h2>Our approach</h2><p>We value clear explanations, responsible use of technology and practical learning that supports professional growth.</p></section></main>; }

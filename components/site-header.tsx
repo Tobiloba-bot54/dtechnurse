@@ -1,0 +1,3 @@
+// File: DTECHNURSE-SITE-main/components/site-header.tsx
+import Link from 'next/link';
+export function SiteHeader() { return <header className="site-header"><Link className="brand" href="/" aria-label="DTECHNURSE home"><img src="/dtechnurse-logo.jpg" alt="DTECHNURSE, Health Tech Impact" /><span>DTECHNURSE</span></Link><nav aria-label="Main navigation"><Link href="/">Home</Link><Link href="/about">About</Link><Link href="/blog">Blog</Link><Link href="/contact">Contact</Link></nav><div className="header-actions"><Link className="text-link" href="/login">Log in</Link><Link className="button small" href="/signup">Create account</Link></div></header>; }

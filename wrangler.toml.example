@@ -1,0 +1,15 @@
+# File: DTECHNURSE-SITE-main/wrangler.toml.example
+name = "dtechnurse-web"
+compatibility_date = "2026-10-01"
+# Configure the correct Next.js Cloudflare adapter for the deployment target.
+# Keep secrets in environment bindings, not in this file.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dtechnurse-db"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+migrations_dir = "db/migrations"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "dtechnurse-media"
