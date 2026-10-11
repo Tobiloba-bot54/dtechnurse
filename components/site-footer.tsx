@@ -14,6 +14,7 @@ const ACCOUNT_LINKS = [
   { href: '/login', label: 'Log in' },
   { href: '/signup', label: 'Create account' },
   { href: '/privacy', label: 'Privacy policy' },
+  { href: '/terms', label: 'Terms of service' },
 ];
 
 export async function SiteFooter() {
