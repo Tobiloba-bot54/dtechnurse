@@ -18,7 +18,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const db = getDatabase();
   if (!db) return jsonError('Database is not configured.', 503);
   const { id } = await context.params;
-  const article = await db.prepare('SELECT id, slug, title, excerpt, body_html, status, featured_media_id, seo_title, seo_description, canonical_url, published_at, created_at, updated_at FROM articles WHERE id = ?').bind(id).first();
+  const article = await db.prepare('SELECT id, slug, title, excerpt, body_html, status, featured_media_id, editor_id, seo_title, seo_description, canonical_url, published_at, created_at, updated_at FROM articles WHERE id = ?').bind(id).first();
   if (!article) return jsonError('Article not found.', 404);
   return Response.json({ article }, { headers: { 'Cache-Control': 'no-store' } });
 }
@@ -43,10 +43,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const seoDescription = cleanText(body.seoDescription, 320) || null;
   const canonicalUrl = cleanText(body.canonicalUrl, 500) || null;
   const featuredMediaId = cleanText(body.featuredMediaId, 100) || null;
+  const editorId = cleanText(body.editorId, 100) || null;
   if (!title || !slug) return jsonError('Title and a valid slug are required.', 400);
   try {
-    const update = db.prepare("UPDATE articles SET slug = ?, title = ?, excerpt = ?, body_html = ?, status = ?, featured_media_id = ?, seo_title = ?, seo_description = ?, canonical_url = ?, published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-      .bind(slug, title, excerpt, html, status, featuredMediaId, seoTitle, seoDescription, canonicalUrl, status, id);
+    const update = db.prepare("UPDATE articles SET slug = ?, title = ?, excerpt = ?, body_html = ?, status = ?, featured_media_id = ?, editor_id = ?, seo_title = ?, seo_description = ?, canonical_url = ?, published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+      .bind(slug, title, excerpt, html, status, featuredMediaId, editorId, seoTitle, seoDescription, canonicalUrl, status, id);
     const revision = db.prepare('INSERT INTO article_revisions (id, article_id, title, excerpt, body_html, changed_by) VALUES (?, ?, ?, ?, ?, ?)').bind(randomUUID(), id, title, excerpt, html, auth.user.id);
     const audit = db.prepare('INSERT INTO admin_audit_log (id, actor_user_id, action, resource_type, resource_id) VALUES (?, ?, ?, ?, ?)').bind(randomUUID(), auth.user.id, `article.${status === 'published' ? 'publish' : 'update'}`, 'article', id);
     if (db.batch) await db.batch([update, revision, audit]);

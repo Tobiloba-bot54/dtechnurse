@@ -4,13 +4,17 @@ import { useState } from 'react';
 import ArticleEditor from './article-editor';
 import PagesEditor from './pages-editor';
 import SocialLinksEditor from './social-links-editor';
+import EditorsManager from './editors-manager';
+import NewsletterComposer from './newsletter-composer';
 
-type Tab = 'articles' | 'pages' | 'social';
+type Tab = 'articles' | 'pages' | 'social' | 'editors' | 'newsletter';
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'articles', label: 'Articles' },
   { id: 'pages', label: 'Pages' },
   { id: 'social', label: 'Social links' },
+  { id: 'editors', label: 'Editors' },
+  { id: 'newsletter', label: 'Newsletter' },
 ];
 
 export default function AdminDashboard() {
@@ -34,6 +38,8 @@ export default function AdminDashboard() {
       {tab === 'articles' && <ArticleEditor />}
       {tab === 'pages' && <PagesEditor />}
       {tab === 'social' && <SocialLinksEditor />}
+      {tab === 'editors' && <EditorsManager />}
+      {tab === 'newsletter' && <NewsletterComposer />}
     </>
   );
 }

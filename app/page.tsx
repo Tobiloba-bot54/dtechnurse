@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { listPublishedArticles } from '@/lib/services/content';
 import { ScrollReveal } from '@/components/scroll-reveal';
+import { NewsletterSignup } from '@/components/newsletter-signup';
 
 export const revalidate = 60;
 
@@ -112,6 +113,8 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      <NewsletterSignup />
     </main>
   );
 }

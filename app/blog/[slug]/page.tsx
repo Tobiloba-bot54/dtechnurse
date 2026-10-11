@@ -1,4 +1,5 @@
 // File: DTECHNURSE-SITE-main/app/blog/[slug]/page.tsx
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublishedArticle } from '@/lib/services/content';
 
@@ -30,12 +31,28 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
   const excerpt = article.excerpt as string;
   const bodyHtml = article.body_html as string;
   const dateLabel = formatDate(article.published_at);
+  const editorSlug = article.editor_slug as string | null;
+  const editorName = article.editor_name as string | null;
+  const editorCredentials = article.editor_credentials as string | null;
+  const editorAvatarUrl = article.editor_avatar_url as string | null;
 
   return (
     <main className="content-page">
       <span className="eyebrow">DTECHNURSE JOURNAL</span>
       <h1>{title}</h1>
       {dateLabel && <p className="admin-muted">{dateLabel}</p>}
+      {editorName && (
+        <Link href={`/editors/${editorSlug}`} className="article-byline">
+          {editorAvatarUrl ? (
+            <img src={editorAvatarUrl} alt="" className="article-byline-avatar" />
+          ) : (
+            <span className="article-byline-avatar article-byline-avatar-fallback" aria-hidden="true">{editorName.slice(0, 1).toUpperCase()}</span>
+          )}
+          <span>
+            By <strong>{editorName}</strong>{editorCredentials ? `, ${editorCredentials}` : ''}
+          </span>
+        </Link>
+      )}
       {excerpt && <p className="lead">{excerpt}</p>}
       <article className="prose" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
     </main>

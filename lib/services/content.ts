@@ -16,7 +16,24 @@ export async function listPublishedArticles(limit = 20): Promise<PublicArticle[]
 }
 export async function getPublishedArticle(slug: string) {
   const db = getDatabase(); if (!db) return null;
-  return db.prepare("SELECT id, slug, title, excerpt, body_html, published_at, featured_media_id, seo_title, seo_description FROM articles WHERE slug = ? AND status = 'published' AND (published_at IS NULL OR published_at <= CURRENT_TIMESTAMP) LIMIT 1").bind(slug).first<Record<string, unknown>>();
+  return db
+    .prepare(
+      "SELECT a.id, a.slug, a.title, a.excerpt, a.body_html, a.published_at, a.featured_media_id, a.seo_title, a.seo_description, e.slug AS editor_slug, e.display_name AS editor_name, e.credentials AS editor_credentials, e.avatar_url AS editor_avatar_url FROM articles a LEFT JOIN editors e ON e.id = a.editor_id AND e.status = 'active' WHERE a.slug = ? AND a.status = 'published' AND (a.published_at IS NULL OR a.published_at <= CURRENT_TIMESTAMP) LIMIT 1"
+    )
+    .bind(slug)
+    .first<Record<string, unknown>>();
+}
+
+export async function listPublishedArticlesByEditor(editorId: string, limit = 20): Promise<PublicArticle[]> {
+  const db = getDatabase(); if (!db) return [];
+  const safeLimit = Math.min(50, Math.max(1, Math.floor(limit)));
+  const result = await db
+    .prepare(
+      "SELECT a.id, a.slug, a.title, a.excerpt, a.published_at, a.featured_media_id, m.public_url AS featured_media_url, m.alt_text AS featured_media_alt FROM articles a LEFT JOIN media_assets m ON m.id = a.featured_media_id WHERE a.status = 'published' AND a.editor_id = ? AND (a.published_at IS NULL OR a.published_at <= CURRENT_TIMESTAMP) ORDER BY a.published_at DESC, a.created_at DESC LIMIT ?"
+    )
+    .bind(editorId, safeLimit)
+    .all<PublicArticle>();
+  return result.results ?? [];
 }
 
 // Admin-editable static pages (About, Privacy, Contact, …). Cached per request so a
