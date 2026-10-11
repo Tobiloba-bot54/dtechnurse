@@ -43,7 +43,7 @@ export function getDatabase(): SqlDatabase | null {
 
   // Vercel (or any Node host) has no binding, so fall back to D1's HTTP API.
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const databaseId = process.env.D1_DATABASE_ID;
+  const databaseId = process.env.D1_DATABASE_ID ?? process.env.CLOUDFLARE_D1_DATABASE_ID;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   if (accountId && databaseId && apiToken) {
     return new D1HttpDatabase(accountId, databaseId, apiToken);
