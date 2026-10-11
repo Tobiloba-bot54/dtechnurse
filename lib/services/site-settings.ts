@@ -8,8 +8,8 @@ const SOCIAL_LINKS_KEY = 'social_links';
 export const defaultSocialLinks: SocialLink[] = [
   { platform: 'Twitter', url: 'https://twitter.com/dtechnurse', enabled: true },
   { platform: 'LinkedIn', url: 'https://www.linkedin.com/company/dtechnurse', enabled: true },
-  { platform: 'Facebook', url: 'https://www.facebook.com/dtechnurse', enabled: true },
   { platform: 'Instagram', url: 'https://www.instagram.com/dtechnurse', enabled: true },
+  { platform: 'TikTok', url: 'https://www.tiktok.com/@dtechnurse', enabled: true },
 ];
 
 function parseSocialLinks(raw: unknown): SocialLink[] | null {
