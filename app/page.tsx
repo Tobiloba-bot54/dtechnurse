@@ -4,6 +4,15 @@ import { listPublishedArticles } from '@/lib/services/content';
 
 export const revalidate = 60;
 
+const TOPIC_TAGS = [
+  'Clinical Workflow', 'Wearable Tech', 'Careers', 'Telehealth', 'EHR Systems',
+  'AI in Nursing', 'Patient Monitoring', 'Digital Literacy', 'Remote Care',
+  'Health Informatics', 'Clinical Decision Support', 'Mobile Health Apps',
+  'Burnout Prevention', 'Nursing Education', 'Medical Devices',
+  'Data Privacy', 'Telemedicine', 'Smart Hospitals', 'Patient Engagement',
+  'Continuing Education',
+];
+
 function formatDate(value: string | null) {
   if (!value) return null;
   const date = new Date(value);
@@ -12,7 +21,7 @@ function formatDate(value: string | null) {
 }
 
 export default async function HomePage() {
-  const articles = await listPublishedArticles(10).catch(() => []);
+  const articles = await listPublishedArticles(20).catch(() => []);
 
   return (
     <main className="home-shell">
@@ -30,6 +39,13 @@ export default async function HomePage() {
             <span>Digital health insights</span>
             <span>Professional growth</span>
           </div>
+        </div>
+      </section>
+
+      <section className="topic-strip" aria-label="Topics covered by DTECHNURSE">
+        <div className="topic-strip-track">
+          {TOPIC_TAGS.map(tag => <span key={tag} className="topic-pill">{tag}</span>)}
+          {TOPIC_TAGS.map(tag => <span key={`${tag}-repeat`} className="topic-pill" aria-hidden="true">{tag}</span>)}
         </div>
       </section>
 
