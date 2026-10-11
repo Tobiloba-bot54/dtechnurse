@@ -1,6 +1,7 @@
 // File: DTECHNURSE-SITE-main/app/page.tsx
 import Link from 'next/link';
 import { listPublishedArticles } from '@/lib/services/content';
+import { ScrollReveal } from '@/components/scroll-reveal';
 
 export const revalidate = 60;
 
@@ -9,8 +10,6 @@ const TOPIC_TAGS = [
   'AI in Nursing', 'Patient Monitoring', 'Digital Literacy', 'Remote Care',
   'Health Informatics', 'Clinical Decision Support', 'Mobile Health Apps',
   'Burnout Prevention', 'Nursing Education', 'Medical Devices',
-  'Data Privacy', 'Telemedicine', 'Smart Hospitals', 'Patient Engagement',
-  'Continuing Education',
 ];
 
 function formatDate(value: string | null) {
@@ -34,11 +33,6 @@ export default async function HomePage() {
             <Link className="button" href="/blog">Explore articles</Link>
             <Link className="button secondary" href="/about">Discover DTECHNURSE</Link>
           </div>
-          <div className="trust-row">
-            <span>Evidence-aware learning</span>
-            <span>Digital health insights</span>
-            <span>Professional growth</span>
-          </div>
         </div>
       </section>
 
@@ -50,24 +44,30 @@ export default async function HomePage() {
       </section>
 
       <section className="feature-grid" aria-label="Explore DTECHNURSE">
-        <article className="feature-card">
-          <span className="card-number">01</span>
-          <h2>Nursing knowledge</h2>
-          <p>Explore clear learning resources for nursing practice and professional development.</p>
-          <Link href="/blog">Browse learning content <span aria-hidden="true">→</span></Link>
-        </article>
-        <article className="feature-card">
-          <span className="card-number">02</span>
-          <h2>Healthcare technology</h2>
-          <p>Understand digital tools, innovation and technology shaping healthcare.</p>
-          <Link href="/blog">Read technology insights <span aria-hidden="true">→</span></Link>
-        </article>
-        <article className="feature-card">
-          <span className="card-number">03</span>
-          <h2>Impact and growth</h2>
-          <p>Find ideas and resources to help turn knowledge into meaningful impact.</p>
-          <Link href="/about">Learn about our mission <span aria-hidden="true">→</span></Link>
-        </article>
+        <ScrollReveal delay={0}>
+          <article className="feature-card">
+            <span className="card-number">01</span>
+            <h2>Nursing knowledge</h2>
+            <p>Explore clear learning resources for nursing practice and professional development.</p>
+            <Link href="/blog">Browse learning content <span aria-hidden="true">→</span></Link>
+          </article>
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <article className="feature-card">
+            <span className="card-number">02</span>
+            <h2>Healthcare technology</h2>
+            <p>Understand digital tools, innovation and technology shaping healthcare.</p>
+            <Link href="/blog">Read technology insights <span aria-hidden="true">→</span></Link>
+          </article>
+        </ScrollReveal>
+        <ScrollReveal delay={200}>
+          <article className="feature-card">
+            <span className="card-number">03</span>
+            <h2>Impact and growth</h2>
+            <p>Find ideas and resources to help turn knowledge into meaningful impact.</p>
+            <Link href="/about">Learn about our mission <span aria-hidden="true">→</span></Link>
+          </article>
+        </ScrollReveal>
       </section>
 
       <section className="home-articles" aria-label="Latest articles">
@@ -86,19 +86,27 @@ export default async function HomePage() {
           </div>
         ) : (
           <div className="home-articles-grid">
-            {articles.map(article => {
+            {articles.map((article, index) => {
               const dateLabel = formatDate(article.published_at);
               return (
-                <article key={article.id} className="home-article-card">
-                  <div className="home-article-media" aria-hidden="true">
-                    <span>{article.title.slice(0, 1).toUpperCase()}</span>
-                  </div>
-                  <div className="home-article-body">
-                    <h3>{article.title}</h3>
-                    {article.excerpt && <p>{article.excerpt}</p>}
-                    {dateLabel && <span className="home-article-date">{dateLabel}</span>}
-                  </div>
-                </article>
+                <ScrollReveal key={article.id} delay={(index % 3) * 100}>
+                  <Link href={`/blog/${article.slug}`} className="home-article-card">
+                    {article.featured_media_url ? (
+                      <div className="home-article-media home-article-media-image">
+                        <img src={article.featured_media_url} alt={article.featured_media_alt || ''} loading="lazy" />
+                      </div>
+                    ) : (
+                      <div className="home-article-media" aria-hidden="true">
+                        <span>{article.title.slice(0, 1).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <div className="home-article-body">
+                      <h3>{article.title}</h3>
+                      {article.excerpt && <p>{article.excerpt}</p>}
+                      {dateLabel && <span className="home-article-date">{dateLabel}</span>}
+                    </div>
+                  </Link>
+                </ScrollReveal>
               );
             })}
           </div>
