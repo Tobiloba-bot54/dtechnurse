@@ -19,8 +19,8 @@ export default async function HomePage() {
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">HEALTH · TECH · IMPACT</span>
-          <h1>Where healthcare meets technology.</h1>
-          <p>DTECHNURSE brings together nursing knowledge, digital health and practical technology resources to support better learning and better care.</p>
+          <h1>The Future of<br />Nursing is <span className="hero-accent">Digital</span></h1>
+          <p>Empowering nurses to master healthcare technology, reduce burnout, and advance their careers in the digital age.</p>
           <div className="hero-actions">
             <Link className="button" href="/blog">Explore articles</Link>
             <Link className="button secondary" href="/about">Discover DTECHNURSE</Link>
