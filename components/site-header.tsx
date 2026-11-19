@@ -29,14 +29,17 @@ export async function SiteHeader() {
       </Link>
       <nav aria-label="Main navigation">
         <Link href="/">Home</Link>
+        <Link href="/store">Store</Link>
         <Link href="/about">About</Link>
         <Link href="/blog">Blog</Link>
         <Link href="/resources">Resources</Link>
         <Link href="/contact">Contact</Link>
       </nav>
       <div className="header-actions">
+        <Link className="text-link" href="/cart">Cart</Link>
         {user ? (
           <>
+            <Link className="text-link" href="/orders">My orders</Link>
             <Link className="text-link" href="/dashboard">My downloads</Link>
             {isAdmin && <Link className="text-link" href="/admin">Admin</Link>}
             <LogoutButton />

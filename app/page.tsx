@@ -3,6 +3,10 @@ import Link from 'next/link';
 import { listPublishedArticles } from '@/lib/services/content';
 import { listPublicResources } from '@/lib/services/resources';
 import { getDisplayImage } from '@/lib/media';
+import { getStoreSettings } from '@/lib/services/store/settings';
+import { listActiveCategories, listFeaturedListings } from '@/lib/services/store/catalog';
+import type { ListingSummary } from '@/lib/services/store/types';
+import { ListingCard } from '@/components/store/listing-card';
 import { ScrollReveal } from '@/components/scroll-reveal';
 import { NewsletterSignup } from '@/components/newsletter-signup';
 
@@ -22,8 +26,19 @@ function formatDate(value: string | null) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+async function loadStoreSection(): Promise<{ enabled: boolean; categories: Array<{ id: string; name: string; slug: string }>; featured: ListingSummary[] }> {
+  try {
+    const settings = await getStoreSettings();
+    if (!settings.homepageSectionEnabled) return { enabled: false, categories: [], featured: [] };
+    const [categories, featured] = await Promise.all([listActiveCategories(), listFeaturedListings(8)]);
+    return { enabled: true, categories, featured };
+  } catch {
+    return { enabled: false, categories: [], featured: [] };
+  }
+}
+
 export default async function HomePage() {
-  const [articles, resources] = await Promise.all([listPublishedArticles(20).catch(() => []), listPublicResources({ homepage: true, limit: 3 }).catch(() => [])]);
+  const [articles, resources, storeSection] = await Promise.all([listPublishedArticles(20).catch(() => []), listPublicResources({ homepage: true, limit: 3 }).catch(() => []), loadStoreSection()]);
 
   return (
     <main className="home-shell">
@@ -77,6 +92,35 @@ export default async function HomePage() {
           </article>
         </ScrollReveal>
       </section>
+
+      {storeSection.enabled && (
+        <section className="home-store" aria-label="DTECHNURSE store">
+          <div className="home-articles-head">
+            <div>
+              <span className="eyebrow">DTECHNURSE STORE</span>
+              <h2>Shop nurse essentials</h2>
+              <p>Scrubs, equipment, books and everyday essentials, delivered across Nigeria.</p>
+            </div>
+            <Link className="text-link" href="/store">Visit the store <span aria-hidden="true">→</span></Link>
+          </div>
+          {storeSection.categories.length > 0 && (
+            <div className="category-grid" aria-label="Shop by category">
+              {storeSection.categories.slice(0, 8).map(category => (
+                <Link key={category.id} href={`/store/category/${category.slug}`} className="category-tile">
+                  <span>{category.name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+          {storeSection.featured.length > 0 && (
+            <div className="product-grid home-store-grid">
+              {storeSection.featured.map(listing => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="home-articles" aria-label="Latest articles">
         <div className="home-articles-head">

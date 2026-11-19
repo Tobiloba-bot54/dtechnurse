@@ -5,9 +5,17 @@ import { SocialIcon } from './social-icon';
 
 const EXPLORE_LINKS = [
   { href: '/', label: 'Home' },
+  { href: '/store', label: 'Store' },
   { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
+];
+
+const SHOP_LINKS = [
+  { href: '/store', label: 'All products' },
+  { href: '/orders', label: 'My orders' },
+  { href: '/wishlist', label: 'Wishlist' },
+  { href: '/store/policies', label: 'Shipping and returns' },
 ];
 
 const ACCOUNT_LINKS = [
@@ -48,6 +56,15 @@ export async function SiteFooter() {
           <span className="footer-col-title">Explore</span>
           <nav aria-label="Explore DTECHNURSE">
             {EXPLORE_LINKS.map(link => (
+              <Link key={link.href} href={link.href}>{link.label}</Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="footer-col">
+          <span className="footer-col-title">Shop</span>
+          <nav aria-label="DTECHNURSE store">
+            {SHOP_LINKS.map(link => (
               <Link key={link.href} href={link.href}>{link.label}</Link>
             ))}
           </nav>

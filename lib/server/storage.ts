@@ -32,9 +32,10 @@ class R2HttpBucket implements ObjectBucket {
 }
 
 export function getBucket(): ObjectBucket | null {
-  // Cloudflare Workers can expose R2 through a binding.
-  const runtime = globalThis as typeof globalThis & { env?: { MEDIA?: ObjectBucket }; MEDIA?: ObjectBucket };
-  const binding = runtime.env?.MEDIA ?? runtime.MEDIA ?? null;
+  // Cloudflare Workers can expose R2 through a binding. MEDIA_BUCKET is the
+  // binding name in wrangler.toml; MEDIA is accepted for older deployments.
+  const runtime = globalThis as typeof globalThis & { env?: { MEDIA_BUCKET?: ObjectBucket; MEDIA?: ObjectBucket }; MEDIA_BUCKET?: ObjectBucket; MEDIA?: ObjectBucket };
+  const binding = runtime.env?.MEDIA_BUCKET ?? runtime.MEDIA_BUCKET ?? runtime.env?.MEDIA ?? runtime.MEDIA ?? null;
   if (binding) return binding;
 
   // Vercel (or any Node host) has no binding, so fall back to R2's S3-compatible API.
