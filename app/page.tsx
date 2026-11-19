@@ -12,6 +12,15 @@ import { NewsletterSignup } from '@/components/newsletter-signup';
 
 export const revalidate = 60;
 
+const CATEGORY_ICONS: Record<string, string> = {
+  'scrubs-uniforms': '🥼', 'footwear': '👟', 'medical-accessories': '🩺',
+  'medical-equipment': '🩻', 'books-study-materials': '📚', 'bags-backpacks': '🎒',
+  'clinical-consumables': '🧤', 'gifts-lifestyle': '🎁', 'digital-products': '💾',
+  'protective-wear-safety': '🛡️', 'training-simulation': '🧑‍⚕️', 'stationery-office-supplies': '🖊️',
+  'home-healthcare-patient-care': '🏠', 'graduation-professional-gifts': '🎓',
+};
+function categoryIcon(slug: string) { return CATEGORY_ICONS[slug] ?? '🛍️'; }
+
 const TOPIC_TAGS = [
   'General', 'Nursing Fundamentals', 'Digital Health', 'Health Informatics',
   'Artificial Intelligence in Healthcare', 'Patient Monitoring Technology',
@@ -95,29 +104,35 @@ export default async function HomePage() {
 
       {storeSection.enabled && (
         <section className="home-store" aria-label="DTECHNURSE store">
-          <div className="home-articles-head">
-            <div>
+          <div className="home-store-banner">
+            <div className="home-store-banner-copy">
               <span className="eyebrow">DTECHNURSE STORE</span>
               <h2>Shop nurse essentials</h2>
               <p>Scrubs, equipment, books and everyday essentials, delivered across Nigeria.</p>
             </div>
-            <Link className="text-link" href="/store">Visit the store <span aria-hidden="true">→</span></Link>
+            <Link className="button light" href="/store">Visit the store <span aria-hidden="true">→</span></Link>
           </div>
           {storeSection.categories.length > 0 && (
             <div className="category-grid" aria-label="Shop by category">
               {storeSection.categories.slice(0, 8).map(category => (
                 <Link key={category.id} href={`/store/category/${category.slug}`} className="category-tile">
-                  <span>{category.name}</span>
+                  <span className="category-tile-icon" aria-hidden="true">{categoryIcon(category.slug)}</span>
+                  <span className="category-tile-name">{category.name}</span>
                 </Link>
               ))}
             </div>
           )}
           {storeSection.featured.length > 0 && (
-            <div className="product-grid home-store-grid">
-              {storeSection.featured.map(listing => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <>
+              <div className="home-articles-head home-store-featured-head">
+                <div><span className="eyebrow">FEATURED</span><h2>Popular right now</h2></div>
+              </div>
+              <div className="product-grid home-store-grid">
+                {storeSection.featured.map(listing => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            </>
           )}
         </section>
       )}
