@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSupabaseServerClient } from '@/lib/server/supabase-auth';
 import { getDatabase } from '@/lib/server/db';
 import { LogoutButton } from '@/components/logout-button';
+import { MobileNavToggle } from '@/components/mobile-nav-toggle';
 
 export async function SiteHeader() {
   const supabase = await getSupabaseServerClient();
@@ -21,36 +22,52 @@ export async function SiteHeader() {
     }
   }
 
+  const navLinks = (
+    <nav aria-label="Main navigation">
+      <Link href="/">Home</Link>
+      <Link href="/store">Store</Link>
+      <Link href="/about">About</Link>
+      <Link href="/blog">Blog</Link>
+      <Link href="/resources">Resources</Link>
+      <Link href="/contact">Contact</Link>
+    </nav>
+  );
+
+  const actions = (
+    <div className="header-actions">
+      <Link className="text-link" href="/cart">Cart</Link>
+      {user ? (
+        <>
+          <Link className="text-link" href="/orders">My orders</Link>
+          <Link className="text-link" href="/dashboard">My downloads</Link>
+          {isAdmin && <Link className="text-link" href="/admin">Admin</Link>}
+          <LogoutButton />
+        </>
+      ) : (
+        <>
+          <Link className="text-link" href="/login">Log in</Link>
+          <Link className="button small" href="/signup">Create account</Link>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <header className="site-header">
       <Link className="brand" href="/" aria-label="DTECHNURSE home">
         <img src="/dtechnurse-logo.jpg" alt="DTECHNURSE, Health Tech Impact" />
         <span>DTECHNURSE</span>
       </Link>
-      <nav aria-label="Main navigation">
-        <Link href="/">Home</Link>
-        <Link href="/store">Store</Link>
-        <Link href="/about">About</Link>
-        <Link href="/blog">Blog</Link>
-        <Link href="/resources">Resources</Link>
-        <Link href="/contact">Contact</Link>
-      </nav>
-      <div className="header-actions">
-        <Link className="text-link" href="/cart">Cart</Link>
-        {user ? (
-          <>
-            <Link className="text-link" href="/orders">My orders</Link>
-            <Link className="text-link" href="/dashboard">My downloads</Link>
-            {isAdmin && <Link className="text-link" href="/admin">Admin</Link>}
-            <LogoutButton />
-          </>
-        ) : (
-          <>
-            <Link className="text-link" href="/login">Log in</Link>
-            <Link className="button small" href="/signup">Create account</Link>
-          </>
-        )}
+
+      <div className="site-header-desktop">
+        {navLinks}
+        {actions}
       </div>
+
+      <MobileNavToggle>
+        {navLinks}
+        {actions}
+      </MobileNavToggle>
     </header>
   );
 }
