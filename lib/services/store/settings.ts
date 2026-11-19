@@ -1,3 +1,4 @@
+// File: lib/services/store/settings.ts
 import { cache } from 'react';
 import { getDatabase, type SqlStatement } from '@/lib/server/db';
 import type { StoreSettings } from './types';
