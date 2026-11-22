@@ -9,6 +9,7 @@ type AdminListingRow = ListingSummary & { status: string; createdAt: string; upd
 type ListingsResponse = { listings: AdminListingRow[]; total: number; page: number; pages: number };
 type StoreConfig = { categories: CategorySummary[]; attributes: CategoryAttribute[] };
 type AdminListingImage = { id: string; objectKey: string; url?: string; alt: string; sortOrder: number; isPrimary: boolean };
+type LibraryMedia = { id: string; public_url: string; alt_text: string; caption: string };
 type AdminListingDetail = {
   id: string;
   listingType: 'single' | 'bundle';
@@ -173,6 +174,10 @@ export function ListingsManager() {
   const [editorMessage, setEditorMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
+  const [library, setLibrary] = useState<LibraryMedia[]>([]);
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -301,6 +306,29 @@ export function ListingsManager() {
     } catch (e) {
       setEditorError(e instanceof Error ? e.message : 'Image upload failed.');
     } finally { setImageBusy(false); }
+  }
+
+  async function loadLibrary(refresh = false) {
+    if (libraryLoaded && !refresh) return;
+    setLibraryLoading(true);
+    try {
+      const response = await fetch('/api/admin/media', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load the media library.');
+      setLibrary(data.media || []);
+      setLibraryLoaded(true);
+    } catch (e) {
+      setEditorError(e instanceof Error ? e.message : 'Could not load the media library.');
+    } finally { setLibraryLoading(false); }
+  }
+
+  function addFromLibrary(item: LibraryMedia) {
+    if (draft.images.some(image => image.objectKey === item.public_url)) return;
+    setDraft(current => ({
+      ...current,
+      images: [...current.images, { objectKey: item.public_url, previewUrl: item.public_url, alt: item.alt_text || current.title || 'Product image', isPrimary: current.images.length === 0 }],
+    }));
+    setEditorMessage('Image added from library. Save the listing to keep it.');
   }
 
   function addBundleProduct(product: PickerProduct) {
@@ -462,6 +490,30 @@ export function ListingsManager() {
                 <h3>Images</h3>
                 <label className="form-field">Upload image<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={imageBusy} onChange={(e: ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) void uploadImage(file); e.target.value = ''; }} /></label>
                 {imageBusy && <p className="admin-muted">Uploading image…</p>}
+                <button type="button" className="button secondary small" onClick={() => { const next = !libraryOpen; setLibraryOpen(next); if (next) void loadLibrary(); }}>
+                  {libraryOpen ? 'Hide media library' : 'Choose from library'}
+                </button>
+                {libraryOpen && (
+                  <div className="admin-panel" style={{ marginTop: 10 }}>
+                    <div className="admin-panel-head">
+                      <h3>Media library</h3>
+                      <button type="button" className="button secondary small" disabled={libraryLoading} onClick={() => void loadLibrary(true)}>{libraryLoading ? 'Refreshing…' : 'Refresh'}</button>
+                    </div>
+                    <p className="admin-muted">Pick an image already uploaded elsewhere on the site to reuse it on this listing.</p>
+                    {libraryLoading && !libraryLoaded ? (
+                      <p className="admin-muted">Loading media…</p>
+                    ) : library.length > 0 ? (
+                      <div className="admin-media-grid">
+                        {library.map(item => (
+                          <button type="button" key={item.id} title={item.alt_text || 'Add image'} onClick={() => addFromLibrary(item)}>
+                            <img src={item.public_url} alt={item.alt_text || ''} loading="lazy" />
+                            <span>{item.alt_text || 'Untitled image'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : <p className="muted-text">No uploaded images yet. Upload one above first.</p>}
+                  </div>
+                )}
                 {draft.images.length > 0 ? (
                   <div className="media-grid">
                     {draft.images.map((image, index) => (
