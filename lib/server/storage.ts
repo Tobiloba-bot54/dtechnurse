@@ -31,9 +31,25 @@ class R2HttpBucket implements ObjectBucket {
   }
 }
 
+function getOpenNextCloudflareEnv(): Record<string, unknown> | null {
+  try {
+    // @opennextjs/cloudflare exposes Workers bindings through an
+    // AsyncLocalStorage-backed context rather than globalThis.
+    const cloudflare = require('@opennextjs/cloudflare') as { getCloudflareContext: () => { env: Record<string, unknown> } };
+    return cloudflare.getCloudflareContext().env ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function getBucket(): ObjectBucket | null {
-  // Cloudflare Workers can expose R2 through a binding. MEDIA_BUCKET is the
-  // binding name in wrangler.toml; MEDIA is accepted for older deployments.
+  // MEDIA_BUCKET is the binding name in wrangler.toml; MEDIA is accepted for
+  // older deployments.
+  const openNextEnv = getOpenNextCloudflareEnv();
+  const fromOpenNext = (openNextEnv?.MEDIA_BUCKET ?? openNextEnv?.MEDIA) as ObjectBucket | undefined;
+  if (fromOpenNext) return fromOpenNext;
+
+  // Cloudflare Workers can also expose R2 through a binding on globalThis.
   const runtime = globalThis as typeof globalThis & { env?: { MEDIA_BUCKET?: ObjectBucket; MEDIA?: ObjectBucket }; MEDIA_BUCKET?: ObjectBucket; MEDIA?: ObjectBucket };
   const binding = runtime.env?.MEDIA_BUCKET ?? runtime.MEDIA_BUCKET ?? runtime.env?.MEDIA ?? runtime.MEDIA ?? null;
   if (binding) return binding;
@@ -50,6 +66,10 @@ export function getBucket(): ObjectBucket | null {
 }
 
 export function getPublicMediaBase(): string | null {
+  const openNextEnv = getOpenNextCloudflareEnv();
+  const fromOpenNext = openNextEnv?.MEDIA_PUBLIC_URL as string | undefined;
+  if (fromOpenNext) return fromOpenNext;
+
   const runtime = globalThis as typeof globalThis & { env?: { MEDIA_PUBLIC_URL?: string }; MEDIA_PUBLIC_URL?: string };
   return runtime.env?.MEDIA_PUBLIC_URL ?? runtime.MEDIA_PUBLIC_URL ?? process.env.R2_PUBLIC_BASE_URL ?? null;
 }
