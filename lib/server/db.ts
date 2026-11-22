@@ -35,8 +35,23 @@ class D1HttpDatabase implements SqlDatabase {
   prepare(sql: string): SqlStatement { return new D1HttpStatement(sql, this.accountId, this.databaseId, this.apiToken); }
 }
 
+function getOpenNextCloudflareBinding<T>(name: string): T | null {
+  try {
+    // @opennextjs/cloudflare exposes Workers bindings through an
+    // AsyncLocalStorage-backed context rather than globalThis.
+    const cloudflare = require('@opennextjs/cloudflare') as { getCloudflareContext: () => { env: Record<string, unknown> } };
+    const env = cloudflare.getCloudflareContext().env;
+    return (env?.[name] as T) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function getDatabase(): SqlDatabase | null {
-  // Cloudflare Workers can expose D1 through a binding.
+  const fromOpenNext = getOpenNextCloudflareBinding<SqlDatabase>('DB');
+  if (fromOpenNext) return fromOpenNext;
+
+  // Cloudflare Workers can also expose D1 through a binding on globalThis.
   const runtime = globalThis as typeof globalThis & { env?: { DB?: SqlDatabase }; DB?: SqlDatabase };
   const binding = runtime.env?.DB ?? runtime.DB ?? null;
   if (binding) return binding;
